@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LumoSpeed WiFi — Captive Login</title>
+  <style>
+    :root {
+      --primary: #059669;
+      --primary-hover: #047857;
+      --bg-page: #0f172a;
+      --bg-card: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --border-active: #10b981;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+      line-height: 1.5;
+    }
+    .portal-wrapper { width: 100%; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .brand-header { text-align: center; padding-top: 8px; }
+    .logo-container {
+      width: 52px; height: 52px; background: linear-gradient(135deg, #10b981, #047857);
+      border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.4);
+    }
+    .wifi-icon { width: 26px; height: 26px; stroke: #fff; }
+    .brand-title { font-size: 22px; font-weight: 700; color: #fff; }
+    .brand-tagline { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .network-badge {
+      display: inline-flex; align-items: center; gap: 6px; background-color: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25); padding: 4px 12px; border-radius: 999px; margin-top: 8px;
+      font-size: 12px; font-weight: 500; color: #34d399;
+    }
+    .badge-dot { width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; animation: pulse-dot 2s infinite; }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
+    .checkout-section { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow); }
+    .section-title { font-size: 17px; font-weight: 700; color: #fff; }
+    .section-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; margin-bottom: 14px; }
+    .plans-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+    .plan-card {
+      position: relative; background-color: #0f172a; border: 2px solid var(--border-color);
+      border-radius: var(--radius-md); padding: 12px 14px; cursor: pointer; transition: all 0.2s ease;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .plan-card.selected { border-color: var(--border-active); background-color: rgba(16, 185, 129, 0.08); box-shadow: 0 0 12px rgba(16, 185, 129, 0.25); }
+    .plan-card.popular { border-color: rgba(245, 158, 11, 0.7); }
+    .plan-badge {
+      position: absolute; top: -9px; right: 12px; background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+    }
+    .plan-header { display: flex; justify-content: space-between; align-items: center; }
+    .plan-duration { font-size: 15px; font-weight: 600; color: #fff; }
+    .plan-price { font-size: 16px; font-weight: 700; color: #34d399; }
+    .plan-desc { font-size: 12px; color: var(--text-muted); }
+    .phone-form-container { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+    .input-label { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .phone-input-wrapper { display: flex; align-items: center; background-color: #0f172a; border: 2px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; }
+    .phone-input-wrapper:focus-within { border-color: #10b981; }
+    .country-prefix { padding: 12px 14px; background-color: #1e293b; color: #94a3b8; font-weight: 600; font-size: 14px; border-right: 1px solid var(--border-color); }
+    .phone-input-wrapper input { flex: 1; background: transparent; border: none; padding: 12px 14px; font-size: 16px; color: #fff; outline: none; font-weight: 500; }
+    .input-hint { font-size: 11px; color: var(--text-muted); }
+    .btn-primary {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none;
+      border-radius: var(--radius-md); padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+    .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
+    .info-footer { margin-top: 18px; border-top: 1px solid var(--border-color); padding-top: 14px; text-align: center; }
+    .steps-row { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .step-num { width: 18px; height: 18px; background-color: #334155; color: #f8fafc; border-radius: 50%; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .support-line { font-size: 12px; color: var(--text-muted); }
+    .support-line strong { color: #38bdf8; }
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 9999; }
+    .modal-overlay.hidden { display: none !important; }
+    .modal-card { width: 100%; max-width: 380px; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 24px 20px; text-align: center; position: relative; }
+    .modal-close { position: absolute; top: 12px; right: 14px; background: transparent; border: none; font-size: 24px; color: var(--text-muted); cursor: pointer; }
+    .pulse-ring { width: 68px; height: 68px; background-color: rgba(16, 185, 129, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; animation: ring-pulse 1.8s infinite; }
+    @keyframes ring-pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); } 70% { box-shadow: 0 0 0 18px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+    .phone-ring-icon { width: 32px; height: 32px; stroke: #10b981; }
+    .modal-title { font-size: 19px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .modal-title.success { color: #34d399; }
+    .modal-title.failed { color: #f87171; }
+    .modal-text { font-size: 14px; color: var(--text-muted); margin-bottom: 14px; }
+    .pin-instruction { background-color: #0f172a; border-left: 3px solid #10b981; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; color: #e2e8f0; margin-bottom: 16px; text-align: left; }
+    .polling-indicator { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #10b981; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .modal-timeout-bar { width: 100%; height: 4px; background-color: #0f172a; border-radius: 2px; overflow: hidden; }
+    .progress-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #10b981, #38bdf8); transition: width 1s linear; }
+    .btn-secondary { width: 100%; background-color: #334155; color: #fff; border: none; border-radius: var(--radius-md); padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="portal-wrapper">
+    <header class="brand-header">
+      <div class="logo-container">
+        <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+          <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+      </div>
+      <h1 class="brand-title">LumoSpeed WiFi</h1>
+      <p class="brand-tagline">Instant High-Speed Internet Access</p>
+      <div class="network-badge">
+        <span class="badge-dot"></span>
+        <span class="badge-text">Connected to Hotspot</span>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section class="checkout-section">
+        <h2 class="section-title">Select an Internet Pass</h2>
+        <p class="section-subtitle">Choose a plan to get connected via M-Pesa STK Push</p>
+
+        <div class="plans-grid" id="plansContainer">
+          <!-- Default Plans -->
+          <div class="plan-card" data-plan-id="3min" data-price="1" data-name="3 Minutes Test Pass">
+            <div class="plan-badge">Test KES 1</div>
+            <div class="plan-header">
+              <span class="plan-duration">3 Minutes (Test)</span>
+              <span class="plan-price">KES 1</span>
+            </div>
+            <div class="plan-desc">Unlimited High Speed (Testing)</div>
+          </div>
+          <div class="plan-card" data-plan-id="1hr" data-price="10" data-name="1 Hour Pass">
+            <div class="plan-header">
+              <span class="plan-duration">1 Hour Pass</span>
+              <span class="plan-price">KES 10</span>
+            </div>
+            <div class="plan-desc">Unlimited High Speed</div>
+          </div>
+          <div class="plan-card popular selected" data-plan-id="3hr" data-price="25" data-name="3 Hours Pass">
+            <div class="plan-badge">Most Popular</div>
+            <div class="plan-header">
+              <span class="plan-duration">3 Hours Pass</span>
+              <span class="plan-price">KES 25</span>
+            </div>
+            <div class="plan-desc">Unlimited High Speed</div>
+          </div>
+          <div class="plan-card" data-plan-id="24hr" data-price="50" data-name="24 Hours Full-Day">
+            <div class="plan-badge">Best Value</div>
+            <div class="plan-header">
+              <span class="plan-duration">24 Hours Full-Day</span>
+              <span class="plan-price">KES 50</span>
+            </div>
+            <div class="plan-desc">Unlimited High Speed</div>
+          </div>
+        </div>
+
+        <div class="phone-form-container">
+          <label for="mpesaPhone" class="input-label">M-Pesa Phone Number</label>
+          <div class="phone-input-wrapper">
+            <span class="country-prefix">+254</span>
+            <input type="tel" id="mpesaPhone" placeholder="0712 345 678" maxlength="12" inputmode="numeric">
+          </div>
+          <span class="input-hint">Enter your phone number to receive payment prompt</span>
+        </div>
+
+        <button id="payBtn" class="btn-primary" disabled>
+          <span id="btnText">Enter M-Pesa Number (KES 25)</span>
+        </button>
+
+        <div class="info-footer">
+          <div class="steps-row">
+            <div><span class="step-num">1</span> Pick Plan</div>
+            <div>→</div>
+            <div><span class="step-num">2</span> Enter PIN</div>
+            <div>→</div>
+            <div><span class="step-num">3</span> Online!</div>
+          </div>
+          <p class="support-line">Need help? WhatsApp or Call <strong>0700 000 000</strong></p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Native MyPublicWiFi Hidden Unlock Form -->
+    <form id="mypublicwifiForm" action="./" method="post" style="display:none;">
+      <input type="hidden" name="_action" id="mypwAction" value="VoucherLogin">
+      <input type="hidden" name="Voucher" id="mypwVoucher" value="">
+    </form>
+
+    <!-- Live Payment Modal -->
+    <div id="paymentModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <button id="closeModalBtn" class="modal-close">&times;</button>
+
+        <div id="modalPendingState">
+          <div class="pulse-ring">
+            <svg class="phone-ring-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+          </div>
+          <h3 class="modal-title">Check Your Phone</h3>
+          <p class="modal-text">An M-Pesa prompt for <strong id="modalAmount">KES 25</strong> has been sent to <strong id="modalPhone">07XXXXXXXX</strong>.</p>
+          <div class="pin-instruction">Enter your <strong>M-Pesa PIN</strong> on your phone to complete payment.</div>
+          <div class="polling-indicator">
+            <div class="spinner"></div>
+            <span id="pollingStatusText">Awaiting confirmation...</span>
+          </div>
+          <div class="modal-timeout-bar">
+            <div id="timeoutProgressBar" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div id="modalSuccessState" style="display:none;">
+          <h3 class="modal-title success">Payment Verified!</h3>
+          <p class="modal-text">Unlocking your internet access now...</p>
+          <div class="spinner" style="margin: 10px auto;"></div>
+        </div>
+
+        <div id="modalFailedState" style="display:none;">
+          <h3 class="modal-title failed">Payment Incomplete</h3>
+          <p id="modalFailedMsg" class="modal-text">The payment request timed out or was cancelled.</p>
+          <button id="retryBtn" class="btn-secondary">Try Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let FLASK_API_BASE = "http://192.168.5.1:5000";
+    let selectedPlan = { id: "3hr", price: 25, name: "3 Hours Pass" };
+    let pollInterval = null;
+    let timerInterval = null;
+
+    // Hotspot Gateway candidate endpoints
+    const CANDIDATE_URLS = [
+      "http://192.168.5.1:5000",
+      "http://192.168.137.1:5000",
+      (window.location.hostname && !window.location.hostname.includes("connectivity") && !window.location.hostname.includes("google") ? "http://" + window.location.hostname + ":5000" : null),
+      "http://127.0.0.1:5000"
+    ].filter(Boolean);
+
+    async function detectFlaskApi() {
+      for (const url of CANDIDATE_URLS) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 1800);
+          const res = await fetch(url + "/api/plans", { method: "GET", mode: "cors", signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            FLASK_API_BASE = url;
+            console.log("Connected to portal server at:", FLASK_API_BASE);
+            const data = await res.json();
+            if (data.plans && data.plans.length > 0) {
+              renderPlans(data.plans);
+            }
+            return url;
+          }
+        } catch (e) {
+          // Continue to next candidate
+        }
+      }
+      return FLASK_API_BASE;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // 1. Detect active Flask API endpoint
+      detectFlaskApi();
+
+      // 2. Setup card click handlers
+      setupCardClicks();
+
+      // 3. Phone input formatting
+      const phoneInput = document.getElementById("mpesaPhone");
+      phoneInput.addEventListener("input", (e) => {
+        let val = e.target.value.replace(/[^0-9]/g, "");
+        if (val.length > 10) val = val.substring(0, 10);
+        e.target.value = val;
+        updatePayBtn();
+      });
+
+      // 4. Pay button click
+      const payBtn = document.getElementById("payBtn");
+      payBtn.addEventListener("click", async () => {
+        const phone = phoneInput.value.trim();
+        if (!selectedPlan || phone.length < 10) return;
+
+        payBtn.disabled = true;
+        payBtn.innerText = "Connecting to Server...";
+
+        // Ensure we have active endpoint
+        await detectFlaskApi();
+        payBtn.innerText = "Sending STK Push...";
+
+        fetch(FLASK_API_BASE + "/api/create-charge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            plan_id: selectedPlan.id,
+            phone: phone,
+          })
+        })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && res.charge_id) {
+            openModal(res);
+            startPolling(res.charge_id);
+          } else {
+            alert(res.error || "Could not trigger payment. Check phone number.");
+            updatePayBtn();
+          }
+        })
+        .catch(err => {
+          alert("Could not reach portal server at:\n" + FLASK_API_BASE + "\n\nError: " + err.message + "\n\nPlease ensure scripts\\start_hotspot.bat is running on your PC.");
+          updatePayBtn();
+        });
+      });
+
+      document.getElementById("closeModalBtn").onclick = closeModal;
+      document.getElementById("retryBtn").onclick = closeModal;
+    });
+
+    function setupCardClicks() {
+      document.querySelectorAll(".plan-card").forEach(card => {
+        card.onclick = () => {
+          document.querySelectorAll(".plan-card").forEach(c => c.classList.remove("selected"));
+          card.classList.add("selected");
+          selectedPlan = {
+            id: card.dataset.planId,
+            price: parseInt(card.dataset.price, 10),
+            name: card.dataset.name
+          };
+          updatePayBtn();
+        };
+      });
+    }
+
+    function renderPlans(plans) {
+      const container = document.getElementById("plansContainer");
+      container.innerHTML = "";
+      plans.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "plan-card" + (p.popular ? " popular" : "") + (p.id === "3hr" ? " selected" : "");
+        div.dataset.planId = p.id;
+        div.dataset.price = p.price_kes;
+        div.dataset.name = p.name;
+        div.innerHTML = `
+          ${p.badge ? `<div class="plan-badge">${p.badge}</div>` : ""}
+          <div class="plan-header">
+            <span class="plan-duration">${p.duration_label || p.name}</span>
+            <span class="plan-price">KES ${p.price_kes}</span>
+          </div>
+          <div class="plan-desc">Unlimited High Speed</div>
+        `;
+        container.appendChild(div);
+      });
+      setupCardClicks();
+    }
+
+    function updatePayBtn() {
+      const phone = document.getElementById("mpesaPhone").value.replace(/[^0-9]/g, "");
+      const payBtn = document.getElementById("payBtn");
+      const valid = selectedPlan && (phone.length === 10);
+      if (valid) {
+        payBtn.disabled = false;
+        payBtn.innerText = `Pay KES ${selectedPlan.price} with M-Pesa`;
+      } else {
+        payBtn.disabled = true;
+        payBtn.innerText = `Enter M-Pesa Number (KES ${selectedPlan ? selectedPlan.price : 0})`;
+      }
+    }
+
+    function openModal(data) {
+      document.getElementById("modalPendingState").style.display = "block";
+      document.getElementById("modalSuccessState").style.display = "none";
+      document.getElementById("modalFailedState").style.display = "none";
+      document.getElementById("modalAmount").innerText = `KES ${data.amount_kes}`;
+      document.getElementById("modalPhone").innerText = data.phone;
+      document.getElementById("pollingStatusText").innerText = "Awaiting PIN on phone...";
+      document.getElementById("paymentModal").classList.remove("hidden");
+
+      let elapsed = 0;
+      const bar = document.getElementById("timeoutProgressBar");
+      bar.style.width = "100%";
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        elapsed += 1;
+        bar.style.width = Math.max(0, 100 - (elapsed / 70) * 100) + "%";
+        if (elapsed >= 70) {
+          clearInterval(timerInterval);
+          clearInterval(pollInterval);
+          showFailed("Payment timed out. You did not enter your PIN in time.");
+        }
+      }, 1000);
+    }
+
+    function startPolling(chargeId) {
+      clearInterval(pollInterval);
+      pollInterval = setInterval(() => {
+        fetch(FLASK_API_BASE + `/api/charge-status/${encodeURIComponent(chargeId)}`)
+          .then(r => r.json())
+          .then(res => {
+            if (res.status === "succeeded" && res.access_granted) {
+              clearInterval(pollInterval);
+              clearInterval(timerInterval);
+              showSuccess(res);
+            } else if (res.status === "failed" || res.status === "expired") {
+              clearInterval(pollInterval);
+              clearInterval(timerInterval);
+              showFailed(res.message || "Payment cancelled or failed.");
+            }
+          })
+          .catch(e => console.log("Poll wait..."));
+      }, 3000);
+    }
+
+    function showSuccess(data) {
+      document.getElementById("modalPendingState").style.display = "none";
+      document.getElementById("modalFailedState").style.display = "none";
+      document.getElementById("modalSuccessState").style.display = "block";
+
+      const actionInput = document.getElementById("mypwAction");
+      const voucherInput = document.getElementById("mypwVoucher");
+
+      if (data && data.voucher_code) {
+        actionInput.value = data.action || "VoucherLogin";
+        voucherInput.value = data.voucher_code;
+      } else {
+        actionInput.value = "TOCLogin";
+        voucherInput.value = "";
+      }
+
+      // Native MyPublicWiFi Unlock: submit form to ./
+      setTimeout(() => {
+        document.getElementById("mypublicwifiForm").submit();
+      }, 1500);
+    }
+
+    function showFailed(msg) {
+      document.getElementById("modalPendingState").style.display = "none";
+      document.getElementById("modalSuccessState").style.display = "none";
+      document.getElementById("modalFailedState").style.display = "block";
+      document.getElementById("modalFailedMsg").innerText = msg;
+      updatePayBtn();
+    }
+
+    function closeModal() {
+      clearInterval(pollInterval);
+      clearInterval(timerInterval);
+      document.getElementById("paymentModal").classList.add("hidden");
+      updatePayBtn();
+    }
+  </script>
+</body>
+</html>
+

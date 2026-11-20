@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>{{ brand_name }} — WiFi Login</title>
+  <link rel="stylesheet" href="/static/css/portal.css">
+</head>
+<body>
+  <div class="portal-wrapper">
+    <!-- Header / Brand -->
+    <header class="brand-header">
+      <div class="logo-container">
+        <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+          <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+      </div>
+      <h1 class="brand-title">{{ brand_name }}</h1>
+      <p class="brand-tagline">{{ brand_tagline }}</p>
+      
+      <div class="network-badge">
+        <span class="badge-dot"></span>
+        <span class="badge-text">Connected to Hotspot</span>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Active Session Alert (Shown if device is already active) -->
+      {% if active_session %}
+      <div class="active-session-card">
+        <div class="active-icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h2>Internet Access Active</h2>
+        <p class="active-plan-name">{{ active_session.plan_name }}</p>
+        
+        <div class="timer-box">
+          <span class="timer-label">Time Remaining</span>
+          <div id="liveCountdown" class="countdown-digits" data-seconds="{{ remaining_seconds }}">--:--:--</div>
+        </div>
+
+        <div class="device-pill">
+          <span>MAC: {{ client_mac }}</span>
+        </div>
+
+        <a href="{{ gateway_url }}" class="btn-primary browse-btn">
+          <span>Start Browsing</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </a>
+      </div>
+      {% else %}
+
+      <!-- Device Identifier Info -->
+      <div class="device-bar">
+        <div class="device-item">
+          <span class="label">IP Address</span>
+          <span class="val" id="deviceIp">{{ client_ip }}</span>
+        </div>
+        <div class="device-item">
+          <span class="label">Device MAC</span>
+          <span class="val" id="deviceMac">{{ client_mac }}</span>
+        </div>
+      </div>
+
+      <!-- Purchase Section -->
+      <section class="checkout-section">
+        <h2 class="section-title">Select an Internet Pass</h2>
+        <p class="section-subtitle">Choose a plan to get connected via M-Pesa STK Push</p>
+
+        <!-- Plans Grid -->
+        <div class="plans-grid">
+          {% for plan in plans %}
+          <div class="plan-card {% if plan.popular %}popular{% endif %}" 
+               data-plan-id="{{ plan.id }}" 
+               data-price="{{ plan.price_kes }}" 
+               data-name="{{ plan.name }}">
+            {% if plan.badge %}
+            <div class="plan-badge">{{ plan.badge }}</div>
+            {% endif %}
+            <div class="plan-header">
+              <span class="plan-duration">{{ plan.duration_label }}</span>
+              <span class="plan-price">KES {{ plan.price_kes }}</span>
+            </div>
+            <div class="plan-desc">Unlimited High Speed</div>
+            <div class="selection-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Phone Number Form -->
+        <div class="phone-form-container">
+          <label for="mpesaPhone" class="input-label">M-Pesa Phone Number</label>
+          <div class="phone-input-wrapper">
+            <span class="country-prefix">+254</span>
+            <input type="tel" 
+                   id="mpesaPhone" 
+                   placeholder="0712 345 678" 
+                   maxlength="12" 
+                   autocomplete="tel"
+                   inputmode="numeric">
+          </div>
+          <span class="input-hint">Enter your phone number to receive the payment prompt</span>
+        </div>
+
+        <!-- Submit Button -->
+        <button id="payBtn" class="btn-primary pay-btn" disabled>
+          <span class="btn-text">Select a Plan to Pay</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+
+        <!-- How It Works & Support -->
+        <div class="info-footer">
+          <div class="steps-row">
+            <div class="step-col">
+              <span class="step-num">1</span>
+              <span>Pick Plan</span>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step-col">
+              <span class="step-num">2</span>
+              <span>Enter PIN</span>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step-col">
+              <span class="step-num">3</span>
+              <span>Online!</span>
+            </div>
+          </div>
+
+          <p class="support-line">Need help? WhatsApp or Call <strong>{{ support_phone }}</strong></p>
+        </div>
+      </section>
+      {% endif %}
+    </main>
+
+    <!-- Hidden Gateway URL info -->
+    <input type="hidden" id="gatewayUrl" value="{{ gateway_url }}">
+
+    <!-- Payment Processing Modal / Overlay -->
+    <div id="paymentModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <!-- Close / Cancel button -->
+        <button id="closeModalBtn" class="modal-close">&times;</button>
+
+        <!-- State 1: Awaiting PIN -->
+        <div id="modalPendingState" class="modal-body-state">
+          <div class="pulse-ring">
+            <svg class="phone-ring-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+          </div>
+          <h3 class="modal-title">Check Your Phone</h3>
+          <p class="modal-text">
+            An M-Pesa prompt for <strong id="modalAmount">KES 0</strong> has been sent to <strong id="modalPhone">07XXXXXXXX</strong>.
+          </p>
+          <div class="pin-instruction">
+            <span>Enter your <strong>M-Pesa PIN</strong> to approve payment.</span>
+          </div>
+          <div class="polling-indicator">
+            <div class="spinner"></div>
+            <span id="pollingStatusText">Awaiting confirmation...</span>
+          </div>
+          <div class="modal-timeout-bar">
+            <div id="timeoutProgressBar" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <!-- State 2: Success -->
+        <div id="modalSuccessState" class="modal-body-state hidden">
+          <div class="success-icon-anim">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <h3 class="modal-title success">Payment Verified!</h3>
+          <p class="modal-text">Your internet access has been unlocked.</p>
+          <div class="activated-badge">
+            <span id="modalPlanActivated">Plan Active</span>
+          </div>
+          <a id="modalBrowseBtn" href="{{ gateway_url }}" class="btn-primary browse-btn">
+            <span>Start Browsing Now</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </a>
+        </div>
+
+        <!-- State 3: Failed / Expired -->
+        <div id="modalFailedState" class="modal-body-state hidden">
+          <div class="failed-icon-anim">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </div>
+          <h3 class="modal-title failed">Payment Incomplete</h3>
+          <p id="modalFailedMsg" class="modal-text">The payment request expired or was cancelled.</p>
+          <button id="retryBtn" class="btn-secondary">Try Again</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/static/js/portal.js"></script>
+</body>
+</html>
+

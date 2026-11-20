@@ -1,0 +1,74 @@
+{
+  "hotspot": {
+    "gateway_ip": "192.168.5.1",
+    "fallback_gateway_ip": "192.168.137.1",
+    "mypublicwifi_db": "C:\\Program Files (x86)\\MyPublicWiFi\\Data.db"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "debug": false,
+    "brand_name": "LumoSpeed WiFi",
+    "brand_tagline": "Instant High-Speed Internet Access",
+    "support_phone": "0700 000 000"
+  },
+  "paths": {
+    "mypublicwifi_exe": "C:\\Program Files (x86)\\MyPublicWiFi\\MyPublicWiFi.exe"
+  },
+  "plans": [
+    {
+      "id": "3min",
+      "name": "3 Minutes Test Pass",
+      "duration_seconds": 180,
+      "duration_label": "3 Minutes (Test)",
+      "price_kes": 1,
+      "badge": "Test KES 1",
+      "popular": false
+    },
+    {
+      "id": "1hr",
+      "name": "1 Hour Pass",
+      "duration_seconds": 3600,
+      "duration_label": "1 Hour",
+      "price_kes": 10,
+      "badge": "Quick Browse",
+      "popular": false
+    },
+    {
+      "id": "3hr",
+      "name": "3 Hours Pass",
+      "duration_seconds": 10800,
+      "duration_label": "3 Hours",
+      "price_kes": 25,
+      "badge": "Most Popular",
+      "popular": true
+    },
+    {
+      "id": "12hr",
+      "name": "12 Hours Half-Day",
+      "duration_seconds": 43200,
+      "duration_label": "12 Hours",
+      "price_kes": 40,
+      "badge": "Work & Study",
+      "popular": false
+    },
+    {
+      "id": "24hr",
+      "name": "24 Hours Full-Day",
+      "duration_seconds": 86400,
+      "duration_label": "24 Hours",
+      "price_kes": 50,
+      "badge": "Best Value",
+      "popular": false
+    },
+    {
+      "id": "7day",
+      "name": "7 Days Weekly",
+      "duration_seconds": 604800,
+      "duration_label": "7 Days",
+      "price_kes": 250,
+      "badge": "Weekly Unlimited",
+      "popular": false
+    }
+  ]
+}
