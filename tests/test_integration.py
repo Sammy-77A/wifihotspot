@@ -241,6 +241,204 @@ class TestCaptivePortal(unittest.TestCase):
         )
         self.assertEqual(resp_invalid.status_code, 401)
 
+    # ------------------------------------------------------------------
+    # 6. Voucher System & Edge Case Tests
+    # ------------------------------------------------------------------
+    def test_11_voucher_code_format(self):
+        code = database.generate_voucher_code()
+        self.assertTrue(code.startswith("LUMO-"))
+        self.assertEqual(len(code), 11)  # LUMO- (5) + 6 chars
+        suffix = code.split("-", 1)[1]
+        for char in suffix:
+            self.assertIn(char, database.VOUCHER_CHARSET)
+            self.assertNotIn(char, ("0", "O", "1", "I"))
+
+    def test_12_voucher_batch_creation(self):
+        batch = database.create_vouchers(
+            plan_id="1hr",
+            plan_name="1 Hour Pass",
+            duration_seconds=3600,
+            amount_kes=10,
+            quantity=5,
+        )
+        self.assertEqual(len(batch), 5)
+        codes = [v["code"] for v in batch]
+        self.assertEqual(len(set(codes)), 5)  # All codes unique
+
+        for v in batch:
+            stored = database.get_voucher(v["code"])
+            self.assertIsNotNone(stored)
+            self.assertEqual(stored["status"], "unused")
+            self.assertEqual(stored["plan_id"], "1hr")
+
+    def test_13_api_redeem_voucher_valid(self):
+        batch = database.create_vouchers(
+            plan_id="3min",
+            plan_name="3 Minutes Test Pass",
+            duration_seconds=180,
+            amount_kes=1,
+            quantity=1,
+        )
+        code = batch[0]["code"]
+
+        resp = self.client.post("/api/redeem-voucher", json={
+            "code": code,
+            "mac": "12:34:56:78:9A:BC",
+            "ip": "192.168.5.105",
+            "gateway_url": "http://192.168.5.1/",
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertTrue(data["success"])
+        self.assertTrue(data["access_granted"])
+        self.assertEqual(data["status"], "succeeded")
+        self.assertIn("session_id", data)
+        self.assertEqual(data["customer_voucher"], code)
+
+        # Check voucher in DB is now redeemed
+        stored = database.get_voucher(code)
+        self.assertEqual(stored["status"], "redeemed")
+        self.assertEqual(stored["redeemed_by_mac"], "12:34:56:78:9A:BC")
+
+    def test_14_api_redeem_voucher_already_used(self):
+        batch = database.create_vouchers(
+            plan_id="1hr",
+            plan_name="1 Hour Pass",
+            duration_seconds=3600,
+            amount_kes=10,
+            quantity=1,
+        )
+        code = batch[0]["code"]
+
+        # First redemption
+        resp1 = self.client.post("/api/redeem-voucher", json={
+            "code": code,
+            "mac": "AA:BB:CC:DD:EE:01",
+            "ip": "192.168.5.101",
+        })
+        self.assertEqual(resp1.status_code, 200)
+
+        # Second redemption with same code -> must fail
+        resp2 = self.client.post("/api/redeem-voucher", json={
+            "code": code,
+            "mac": "AA:BB:CC:DD:EE:02",
+            "ip": "192.168.5.102",
+        })
+        self.assertEqual(resp2.status_code, 400)
+        data2 = json.loads(resp2.data)
+        self.assertFalse(data2["success"])
+        self.assertEqual(data2["error"], "This voucher has already been used")
+
+    def test_15_api_redeem_voucher_invalid_code(self):
+        resp = self.client.post("/api/redeem-voucher", json={
+            "code": "LUMO-NONEXISTENT",
+            "mac": "AA:BB:CC:DD:EE:03",
+            "ip": "192.168.5.103",
+        })
+        self.assertEqual(resp.status_code, 404)
+        data = json.loads(resp.data)
+        self.assertFalse(data["success"])
+        self.assertEqual(data["error"], "Invalid voucher code")
+
+    def test_16_api_redeem_voucher_expired(self):
+        batch = database.create_vouchers(
+            plan_id="1hr",
+            plan_name="1 Hour Pass",
+            duration_seconds=3600,
+            amount_kes=10,
+            quantity=1,
+        )
+        code = batch[0]["code"]
+
+        # Manually backdate expires_at to the past
+        conn = database.get_db_connection()
+        conn.execute(
+            "UPDATE vouchers SET expires_at = '2020-01-01T00:00:00+00:00' WHERE code = ?",
+            (code,),
+        )
+        conn.commit()
+        conn.close()
+
+        resp = self.client.post("/api/redeem-voucher", json={
+            "code": code,
+            "mac": "AA:BB:CC:DD:EE:04",
+            "ip": "192.168.5.104",
+        })
+        self.assertEqual(resp.status_code, 400)
+        data = json.loads(resp.data)
+        self.assertFalse(data["success"])
+        self.assertEqual(data["error"], "This voucher has expired")
+
+    # ------------------------------------------------------------------
+    # 7. Admin Panel & Authentication Tests
+    # ------------------------------------------------------------------
+    def test_17_admin_auth_flow(self):
+        # 1. Unauthenticated request to /admin redirects to /admin/login
+        resp_unauth = self.client.get("/admin")
+        self.assertEqual(resp_unauth.status_code, 302)
+        self.assertIn("/admin/login", resp_unauth.headers.get("Location", ""))
+
+        # 2. Invalid credentials fail
+        resp_fail = self.client.post("/admin/login", data={"username": "admin", "password": "wrongpassword"})
+        self.assertEqual(resp_fail.status_code, 200)
+        self.assertIn(b"Invalid username or password", resp_fail.data)
+
+        # 3. Valid credentials succeed
+        resp_login = self.client.post("/admin/login", data={"username": "admin", "password": "admin123"}, follow_redirects=True)
+        self.assertEqual(resp_login.status_code, 200)
+        self.assertIn(b"Voucher Generator", resp_login.data)
+
+        # 4. Logout clears session
+        resp_logout = self.client.get("/admin/logout", follow_redirects=True)
+        self.assertEqual(resp_logout.status_code, 200)
+        self.assertIn(b"Hotspot Admin", resp_logout.data)
+
+    def test_18_admin_voucher_generate_and_export(self):
+        # Login first
+        self.client.post("/admin/login", data={"username": "admin", "password": "admin123"})
+
+        # Generate batch of 3 vouchers via JSON
+        resp_gen = self.client.post(
+            "/admin/vouchers/generate",
+            json={"plan_id": "1hr", "quantity": 3},
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+        )
+        self.assertEqual(resp_gen.status_code, 200)
+        data = json.loads(resp_gen.data)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["count"], 3)
+
+        # Download CSV export
+        resp_csv = self.client.get("/admin/vouchers/export.csv")
+        self.assertEqual(resp_csv.status_code, 200)
+        self.assertIn("text/csv", resp_csv.headers.get("Content-Type", ""))
+        self.assertIn(b"Voucher Code,Plan ID,Plan Name", resp_csv.data)
+
+    def test_19_admin_session_manual_revoke(self):
+        # Create an active session
+        sess_id = "TEST-ADMIN-REVOKE-01"
+        database.create_active_voucher_session(
+            session_id=sess_id,
+            client_ip="192.168.5.199",
+            client_mac="FE:DC:BA:98:76:54",
+            plan_id="1hr",
+            plan_name="1 Hour Pass",
+            amount_kes=10,
+            duration_seconds=3600,
+            voucher_code="LUMO-REVOKE1",
+        )
+        sess = database.get_session_by_id(sess_id)
+        self.assertEqual(sess["status"], "active")
+
+        # Admin revokes session
+        self.client.post("/admin/login", data={"username": "admin", "password": "admin123"})
+        resp_revoke = self.client.post(f"/admin/sessions/revoke/{sess_id}", headers={"Accept": "application/json"})
+        self.assertEqual(resp_revoke.status_code, 200)
+
+        # Verify session is now revoked/expired
+        sess_after = database.get_session_by_id(sess_id)
+        self.assertEqual(sess_after["status"], "expired")
+
 
 if __name__ == "__main__":
     unittest.main()

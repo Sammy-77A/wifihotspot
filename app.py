@@ -4,12 +4,15 @@ Integrated with Cyzora M-Pesa STK Push and MyPublicWiFi Hotspot.
 """
 
 import os
+import csv
+import io
 import json
 import uuid
 import logging
 import datetime
-from typing import Optional, Dict, Any
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from functools import wraps
+from typing import Optional, Dict, Any, List
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session, Response, flash
 
 # Load environment variables from .env if present
 try:
@@ -73,6 +76,21 @@ hotspot_manager = HotspotManager(CONFIG.get("hotspot", {}))
 
 # Start background session expiry worker
 start_background_worker(CONFIG.get("hotspot", {}), interval_seconds=15)
+
+
+# Admin Credentials from Environment Variables
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin").strip() or "admin"
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123").strip() or "admin123"
+
+
+def admin_required(f):
+    """Decorator ensuring request has an authenticated admin session."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def get_plan_by_id(plan_id: str) -> Optional[Dict[str, Any]]:
@@ -208,6 +226,101 @@ def api_check_session():
         })
 
     return jsonify({"active": False})
+
+
+@app.route("/api/redeem-voucher", methods=["POST"])
+def api_redeem_voucher():
+    """
+    Validates and redeems a single-use voucher code.
+    Immediately activates a session, unlocks the client device via HotspotManager,
+    and returns a response matching the successful api_charge_status shape.
+    """
+    payload = request.get_json(silent=True) or request.form.to_dict()
+    raw_code = (payload.get("code") or "").strip()
+    if not raw_code:
+        return jsonify({"success": False, "error": "Please enter a voucher code."}), 400
+
+    client_ip = payload.get("ip") or device_manager.get_client_ip(request)
+    client_mac = payload.get("mac") or device_manager.resolve_mac(request, client_ip)
+    gateway_url = payload.get("gateway_url") or f"http://{hotspot_manager.gateway_ip}/"
+
+    # 1. Lookup voucher in database
+    voucher = database.get_voucher(raw_code)
+    if not voucher:
+        return jsonify({"success": False, "error": "Invalid voucher code"}), 404
+
+    # 2. Check if already used
+    if voucher["status"] == "redeemed" or voucher.get("redeemed_at"):
+        return jsonify({"success": False, "error": "This voucher has already been used"}), 400
+
+    # 3. Check if expired
+    if voucher.get("expires_at"):
+        now_iso = database.get_utc_now_iso()
+        if voucher["expires_at"] <= now_iso:
+            return jsonify({"success": False, "error": "This voucher has expired"}), 400
+
+    if voucher["status"] != "unused":
+        return jsonify({"success": False, "error": "This voucher is no longer valid"}), 400
+
+    # 4. Fallback MAC resolution if needed
+    if not client_mac or client_mac == "00:00:00:00:00:00":
+        client_info = device_manager.get_client_device_info(request)
+        client_mac = client_info["mac"] or "02:00:00:00:00:01"
+
+    # 5. Create unique session
+    session_id = f"WIFI-VOUCH-{uuid.uuid4().hex[:8].upper()}"
+    plan_id = voucher["plan_id"]
+    plan_name = voucher["plan_name"]
+    duration_seconds = voucher["duration_seconds"]
+    amount_kes = voucher["amount_kes"]
+
+    # Atomically mark voucher as redeemed
+    redeem_res = database.redeem_voucher(voucher["code"], client_mac, client_ip, session_id)
+    if not redeem_res.get("success"):
+        return jsonify({"success": False, "error": redeem_res.get("error", "Failed to redeem voucher.")}), 400
+
+    # Create active session record in database
+    session_record = database.create_active_voucher_session(
+        session_id=session_id,
+        client_ip=client_ip,
+        client_mac=client_mac,
+        plan_id=plan_id,
+        plan_name=plan_name,
+        amount_kes=amount_kes,
+        duration_seconds=duration_seconds,
+        voucher_code=voucher["code"],
+        gateway_url=gateway_url,
+    )
+
+    # 6. Unlock client through hotspot_manager
+    unlock_res = hotspot_manager.unlock_client(
+        client_mac=client_mac,
+        client_ip=client_ip,
+        duration_seconds=duration_seconds,
+        session_id=session_id,
+    )
+
+    logger.info(f"Voucher {voucher['code']} successfully redeemed by MAC {client_mac} (IP {client_ip}) for plan '{plan_name}'")
+
+    # 7. Return response matching api_charge_status shape for frontend compatibility
+    return jsonify({
+        "success": True,
+        "status": "succeeded",
+        "access_granted": True,
+        "session_id": session_id,
+        "customer_voucher": voucher["code"],
+        "plan_name": plan_name,
+        "duration_seconds": duration_seconds,
+        "amount_kes": amount_kes,
+        "activated_at": session_record.get("activated_at"),
+        "expires_at": session_record.get("expires_at"),
+        "mode": unlock_res.get("mode", "mypublicwifi_voucher"),
+        "action": unlock_res.get("action", "VoucherLogin"),
+        "voucher_code": unlock_res.get("voucher_code", voucher["code"]),
+        "duration_minutes": unlock_res.get("duration_minutes", duration_seconds // 60),
+        "gateway_url": gateway_url,
+        "message": f"Voucher applied! Internet access unlocked for {max(1, duration_seconds // 60)} minutes.",
+    })
 
 
 @app.route("/api/create-charge", methods=["POST"])
@@ -476,6 +589,217 @@ def cyzora_webhook():
         database.mark_session_failed(charge_id, reason=f"Webhook event: {event_type}")
 
     return jsonify({"received": True, "event": event_type}), 200
+
+
+# ----------------------------------------------------------------------
+# Admin Panel Routes
+# ----------------------------------------------------------------------
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    """Web-based login form for administrator access."""
+    if session.get("admin_logged_in"):
+        return redirect(url_for("admin_dashboard"))
+
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session["admin_logged_in"] = True
+            logger.info(f"Admin user '{username}' logged in successfully.")
+            database.log_audit("admin_login", None, None, f"Admin user '{username}' authenticated successfully")
+            next_url = request.args.get("next") or url_for("admin_dashboard")
+            return redirect(next_url)
+        else:
+            error = "Invalid username or password. Please try again."
+            logger.warning(f"Failed admin login attempt for user '{username}'")
+
+    return render_template("admin/login.html", error=error)
+
+
+@app.route("/admin/logout", methods=["GET"])
+def admin_logout():
+    """Logs out the administrator."""
+    session.pop("admin_logged_in", None)
+    return redirect(url_for("admin_login"))
+
+
+@app.route("/admin", methods=["GET"])
+@admin_required
+def admin_dashboard():
+    """Main administrative dashboard."""
+    active_sessions = database.get_all_active_sessions()
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    for s in active_sessions:
+        if s.get("expires_at"):
+            try:
+                exp = datetime.datetime.fromisoformat(s["expires_at"])
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=datetime.timezone.utc)
+                diff = int((exp - now_utc).total_seconds())
+                s["remaining_seconds"] = max(0, diff)
+                s["remaining_minutes"] = max(0, diff // 60)
+            except Exception:
+                s["remaining_seconds"] = 0
+                s["remaining_minutes"] = 0
+        else:
+            s["remaining_seconds"] = 0
+            s["remaining_minutes"] = 0
+
+    voucher_stats = database.get_voucher_stats()
+    vouchers = database.get_all_vouchers(limit=100)
+    history = database.get_session_history(limit=50)
+    audit_logs = database.get_audit_logs(limit=50)
+    plans = CONFIG.get("plans", [])
+
+    return render_template(
+        "admin/dashboard.html",
+        active_sessions=active_sessions,
+        voucher_stats=voucher_stats,
+        vouchers=vouchers,
+        history=history,
+        audit_logs=audit_logs,
+        plans=plans,
+        brand_name=CONFIG["server"].get("brand_name", "LumoSpeed WiFi"),
+    )
+
+
+@app.route("/admin/vouchers/generate", methods=["POST"])
+@admin_required
+def admin_generate_vouchers():
+    """Generates a batch of unique voucher codes."""
+    wants_json = request.is_json or "application/json" in request.headers.get("Accept", "")
+    payload = request.get_json(silent=True) or request.form.to_dict()
+    plan_id = payload.get("plan_id")
+    quantity_raw = payload.get("quantity", 1)
+    expiry_days_raw = payload.get("expiry_days")
+
+    plan = get_plan_by_id(plan_id)
+    if not plan:
+        msg = f"Invalid plan selected: {plan_id}"
+        if wants_json:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("admin_dashboard") + "#vouchers")
+
+    try:
+        quantity = max(1, min(500, int(quantity_raw)))
+    except (ValueError, TypeError):
+        quantity = 1
+
+    expiry_days = None
+    if expiry_days_raw:
+        try:
+            exp_val = int(expiry_days_raw)
+            if exp_val > 0:
+                expiry_days = exp_val
+        except (ValueError, TypeError):
+            expiry_days = None
+
+    created = database.create_vouchers(
+        plan_id=plan["id"],
+        plan_name=plan["name"],
+        duration_seconds=plan["duration_seconds"],
+        amount_kes=int(plan["price_kes"]),
+        quantity=quantity,
+        expiry_days=expiry_days,
+    )
+
+    if wants_json:
+        return jsonify({
+            "success": True,
+            "count": len(created),
+            "vouchers": created,
+        })
+
+    flash(f"Successfully generated {len(created)} vouchers for {plan['name']}!", "success")
+    return redirect(url_for("admin_dashboard") + "#vouchers")
+
+
+@app.route("/admin/vouchers/export.csv", methods=["GET"])
+@admin_required
+def admin_export_vouchers_csv():
+    """Exports all vouchers or filtered vouchers to a CSV file."""
+    status_filter = request.args.get("status")
+    vouchers = database.get_all_vouchers(status=status_filter, limit=10000)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Voucher Code",
+        "Plan ID",
+        "Plan Name",
+        "Duration (Minutes)",
+        "Price (KES)",
+        "Status",
+        "Created At",
+        "Expires At",
+        "Redeemed At",
+        "Redeemed By MAC",
+        "Redeemed By IP",
+        "Session ID",
+    ])
+
+    for v in vouchers:
+        writer.writerow([
+            v.get("code"),
+            v.get("plan_id"),
+            v.get("plan_name"),
+            (v.get("duration_seconds") or 0) // 60,
+            v.get("amount_kes"),
+            v.get("status"),
+            v.get("created_at"),
+            v.get("expires_at") or "Never",
+            v.get("redeemed_at") or "",
+            v.get("redeemed_by_mac") or "",
+            v.get("redeemed_by_ip") or "",
+            v.get("session_id") or "",
+        ])
+
+    csv_data = output.getvalue()
+    filename = f"wifihotspot_vouchers_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.route("/admin/sessions/revoke/<session_id>", methods=["POST"])
+@admin_required
+def admin_revoke_session(session_id: str):
+    """Manually revokes an active session."""
+    wants_json = request.is_json or "application/json" in request.headers.get("Accept", "")
+    session_record = database.get_session_by_id(session_id)
+    if not session_record:
+        if wants_json:
+            return jsonify({"success": False, "error": "Session not found."}), 404
+        flash("Session not found.", "error")
+        return redirect(url_for("admin_dashboard") + "#active-sessions")
+
+    mac = session_record.get("client_mac", "")
+    ip = session_record.get("client_ip", "")
+
+    # Revoke in hotspot manager & database
+    try:
+        hotspot_manager.revoke_client(client_mac=mac, client_ip=ip, session_id=session_id)
+    except Exception as e:
+        logger.error(f"Error revoking client in hotspot_manager: {e}")
+
+    database.revoke_session(session_id)
+    database.log_audit(
+        "admin_manual_revoke",
+        session_id,
+        mac,
+        f"Session manually terminated by administrator for {mac} ({ip})",
+    )
+
+    if wants_json:
+        return jsonify({"success": True, "message": f"Session {session_id} for {mac} revoked."})
+
+    flash(f"Session {session_id} for {mac} was revoked successfully.", "success")
+    return redirect(url_for("admin_dashboard") + "#active-sessions")
 
 
 def true_or_bool(val: bool) -> bool:

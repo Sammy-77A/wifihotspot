@@ -74,11 +74,33 @@
 
       <!-- Purchase Section -->
       <section class="checkout-section">
-        <h2 class="section-title">Select an Internet Pass</h2>
-        <p class="section-subtitle">Choose a plan to get connected via M-Pesa STK Push</p>
+        <!-- Switcher Tabs -->
+        <div class="checkout-tabs">
+          <button type="button" class="checkout-tab active" id="tabMpesaBtn" onclick="switchCheckoutTab('mpesa')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+            M-Pesa STK Pay
+          </button>
+          <button type="button" class="checkout-tab" id="tabVoucherBtn" onclick="switchCheckoutTab('voucher')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+              <line x1="13" y1="5" x2="13" y2="7"></line>
+              <line x1="13" y1="11" x2="13" y2="13"></line>
+              <line x1="13" y1="17" x2="13" y2="19"></line>
+            </svg>
+            Have a Voucher?
+          </button>
+        </div>
 
-        <!-- Plans Grid -->
-        <div class="plans-grid">
+        <!-- M-Pesa Panel -->
+        <div id="mpesaPanel">
+          <h2 class="section-title">Select an Internet Pass</h2>
+          <p class="section-subtitle">Choose a plan to get connected via M-Pesa STK Push</p>
+
+          <!-- Plans Grid -->
+          <div class="plans-grid">
           {% for plan in plans %}
           <div class="plan-card {% if plan.popular %}popular{% endif %}" 
                data-plan-id="{{ plan.id }}" 
@@ -146,6 +168,39 @@
 
           <p class="support-line">Need help? WhatsApp or Call <strong>{{ support_phone }}</strong></p>
         </div>
+      </div><!-- End of #mpesaPanel -->
+
+      <!-- Voucher Panel -->
+      <div id="voucherPanel" class="voucher-panel" style="display:none;">
+        <h2 class="section-title">Redeem Access Voucher</h2>
+        <p class="section-subtitle">Enter your 10-character voucher code to connect instantly</p>
+
+        <div class="voucher-form-container">
+          <label for="voucherCodeInput" class="input-label">Voucher Code</label>
+          <div class="voucher-input-wrapper">
+            <input type="text" 
+                   id="voucherCodeInput" 
+                   placeholder="e.g. LUMO-78X2KP" 
+                   maxlength="16" 
+                   autocomplete="off" 
+                   autocapitalize="characters"
+                   spellcheck="false">
+          </div>
+          <div id="voucherErrorAlert" class="voucher-error-alert" style="display:none;"></div>
+        </div>
+
+        <button id="redeemVoucherBtn" class="btn-primary pay-btn" type="button">
+          <span class="btn-text">Connect with Voucher</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+
+        <div class="info-footer">
+          <p class="support-line">Need help or want to buy a voucher? Contact <strong>{{ support_phone }}</strong></p>
+        </div>
+      </div><!-- End of #voucherPanel -->
       </section>
       {% endif %}
     </main>

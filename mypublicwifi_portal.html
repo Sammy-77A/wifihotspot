@@ -104,6 +104,17 @@
     .modal-timeout-bar { width: 100%; height: 4px; background-color: #0f172a; border-radius: 2px; overflow: hidden; }
     .progress-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #10b981, #38bdf8); transition: width 1s linear; }
     .btn-secondary { width: 100%; background-color: #334155; color: #fff; border: none; border-radius: var(--radius-md); padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+
+    /* Switcher Tabs */
+    .checkout-tabs { display: flex; background-color: #0f172a; border-radius: var(--radius-md); padding: 4px; margin-bottom: 18px; border: 1px solid var(--border-color); gap: 4px; }
+    .checkout-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; background: none; border: none; border-radius: var(--radius-sm); color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .checkout-tab:hover { color: #fff; }
+    .checkout-tab.active { background-color: #1e293b; color: #34d399; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+    .voucher-panel { display: flex; flex-direction: column; gap: 14px; }
+    .voucher-input-wrapper { width: 100%; }
+    .voucher-input-wrapper input { width: 100%; padding: 14px; background-color: #0f172a; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: #34d399; font-family: monospace; font-size: 18px; font-weight: 700; letter-spacing: 2px; text-align: center; text-transform: uppercase; outline: none; box-sizing: border-box; }
+    .voucher-input-wrapper input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+    .voucher-error-alert { background-color: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; padding: 10px; border-radius: var(--radius-sm); font-size: 13px; text-align: center; }
   </style>
 </head>
 <body>
@@ -127,66 +138,117 @@
 
     <main class="main-content">
       <section class="checkout-section">
-        <h2 class="section-title">Select an Internet Pass</h2>
-        <p class="section-subtitle">Choose a plan to get connected via M-Pesa STK Push</p>
+        <!-- Switcher Tabs -->
+        <div class="checkout-tabs">
+          <button type="button" class="checkout-tab active" id="tabMpesaBtn" onclick="switchCheckoutTab('mpesa')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+            M-Pesa STK Pay
+          </button>
+          <button type="button" class="checkout-tab" id="tabVoucherBtn" onclick="switchCheckoutTab('voucher')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"></path>
+              <line x1="13" y1="5" x2="13" y2="7"></line>
+              <line x1="13" y1="11" x2="13" y2="13"></line>
+              <line x1="13" y1="17" x2="13" y2="19"></line>
+            </svg>
+            Have a Voucher?
+          </button>
+        </div>
 
-        <div class="plans-grid" id="plansContainer">
-          <!-- Default Plans -->
-          <div class="plan-card" data-plan-id="3min" data-price="1" data-name="3 Minutes Test Pass">
-            <div class="plan-badge">Test KES 1</div>
-            <div class="plan-header">
-              <span class="plan-duration">3 Minutes (Test)</span>
-              <span class="plan-price">KES 1</span>
+        <!-- M-Pesa Panel -->
+        <div id="mpesaPanel">
+          <h2 class="section-title">Select an Internet Pass</h2>
+          <p class="section-subtitle">Choose a plan to get connected via M-Pesa STK Push</p>
+
+          <div class="plans-grid" id="plansContainer">
+            <!-- Default Plans -->
+            <div class="plan-card" data-plan-id="3min" data-price="1" data-name="3 Minutes Test Pass">
+              <div class="plan-badge">Test KES 1</div>
+              <div class="plan-header">
+                <span class="plan-duration">3 Minutes (Test)</span>
+                <span class="plan-price">KES 1</span>
+              </div>
+              <div class="plan-desc">Unlimited High Speed (Testing)</div>
             </div>
-            <div class="plan-desc">Unlimited High Speed (Testing)</div>
+            <div class="plan-card" data-plan-id="1hr" data-price="10" data-name="1 Hour Pass">
+              <div class="plan-header">
+                <span class="plan-duration">1 Hour Pass</span>
+                <span class="plan-price">KES 10</span>
+              </div>
+              <div class="plan-desc">Unlimited High Speed</div>
+            </div>
+            <div class="plan-card popular selected" data-plan-id="3hr" data-price="25" data-name="3 Hours Pass">
+              <div class="plan-badge">Most Popular</div>
+              <div class="plan-header">
+                <span class="plan-duration">3 Hours Pass</span>
+                <span class="plan-price">KES 25</span>
+              </div>
+              <div class="plan-desc">Unlimited High Speed</div>
+            </div>
+            <div class="plan-card" data-plan-id="24hr" data-price="50" data-name="24 Hours Full-Day">
+              <div class="plan-badge">Best Value</div>
+              <div class="plan-header">
+                <span class="plan-duration">24 Hours Full-Day</span>
+                <span class="plan-price">KES 50</span>
+              </div>
+              <div class="plan-desc">Unlimited High Speed</div>
+            </div>
           </div>
-          <div class="plan-card" data-plan-id="1hr" data-price="10" data-name="1 Hour Pass">
-            <div class="plan-header">
-              <span class="plan-duration">1 Hour Pass</span>
-              <span class="plan-price">KES 10</span>
+
+          <div class="phone-form-container">
+            <label for="mpesaPhone" class="input-label">M-Pesa Phone Number</label>
+            <div class="phone-input-wrapper">
+              <span class="country-prefix">+254</span>
+              <input type="tel" id="mpesaPhone" placeholder="0712 345 678" maxlength="12" inputmode="numeric">
             </div>
-            <div class="plan-desc">Unlimited High Speed</div>
+            <span class="input-hint">Enter your phone number to receive payment prompt</span>
           </div>
-          <div class="plan-card popular selected" data-plan-id="3hr" data-price="25" data-name="3 Hours Pass">
-            <div class="plan-badge">Most Popular</div>
-            <div class="plan-header">
-              <span class="plan-duration">3 Hours Pass</span>
-              <span class="plan-price">KES 25</span>
+
+          <button id="payBtn" class="btn-primary" disabled>
+            <span id="btnText">Enter M-Pesa Number (KES 25)</span>
+          </button>
+
+          <div class="info-footer">
+            <div class="steps-row">
+              <div><span class="step-num">1</span> Pick Plan</div>
+              <div>→</div>
+              <div><span class="step-num">2</span> Enter PIN</div>
+              <div>→</div>
+              <div><span class="step-num">3</span> Online!</div>
             </div>
-            <div class="plan-desc">Unlimited High Speed</div>
-          </div>
-          <div class="plan-card" data-plan-id="24hr" data-price="50" data-name="24 Hours Full-Day">
-            <div class="plan-badge">Best Value</div>
-            <div class="plan-header">
-              <span class="plan-duration">24 Hours Full-Day</span>
-              <span class="plan-price">KES 50</span>
-            </div>
-            <div class="plan-desc">Unlimited High Speed</div>
+            <p class="support-line">Need help? WhatsApp or Call <strong>0700 000 000</strong></p>
           </div>
         </div>
 
-        <div class="phone-form-container">
-          <label for="mpesaPhone" class="input-label">M-Pesa Phone Number</label>
-          <div class="phone-input-wrapper">
-            <span class="country-prefix">+254</span>
-            <input type="tel" id="mpesaPhone" placeholder="0712 345 678" maxlength="12" inputmode="numeric">
-          </div>
-          <span class="input-hint">Enter your phone number to receive payment prompt</span>
-        </div>
+        <!-- Voucher Panel -->
+        <div id="voucherPanel" class="voucher-panel" style="display:none;">
+          <h2 class="section-title">Redeem Access Voucher</h2>
+          <p class="section-subtitle">Enter your 10-character code below to connect instantly</p>
 
-        <button id="payBtn" class="btn-primary" disabled>
-          <span id="btnText">Enter M-Pesa Number (KES 25)</span>
-        </button>
-
-        <div class="info-footer">
-          <div class="steps-row">
-            <div><span class="step-num">1</span> Pick Plan</div>
-            <div>→</div>
-            <div><span class="step-num">2</span> Enter PIN</div>
-            <div>→</div>
-            <div><span class="step-num">3</span> Online!</div>
+          <div class="voucher-form-container">
+            <label for="voucherCodeInput" class="input-label">Voucher Code</label>
+            <div class="voucher-input-wrapper">
+              <input type="text" 
+                     id="voucherCodeInput" 
+                     placeholder="e.g. LUMO-78X2KP" 
+                     maxlength="16" 
+                     autocomplete="off" 
+                     autocapitalize="characters"
+                     spellcheck="false">
+            </div>
+            <div id="voucherErrorAlert" class="voucher-error-alert" style="display:none; margin-top:8px;"></div>
           </div>
-          <p class="support-line">Need help? WhatsApp or Call <strong>0700 000 000</strong></p>
+
+          <button id="redeemVoucherBtn" class="btn-primary" type="button" style="margin-top:4px;">
+            <span id="voucherBtnText">Connect with Voucher</span>
+          </button>
+
+          <div class="info-footer">
+            <p class="support-line">Need help or want to buy a voucher? Contact <strong>0700 000 000</strong></p>
+          </div>
         </div>
       </section>
     </main>
@@ -459,6 +521,95 @@
       clearInterval(timerInterval);
       document.getElementById("paymentModal").classList.add("hidden");
       updatePayBtn();
+    }
+
+    function switchCheckoutTab(mode) {
+      const mpesaBtn = document.getElementById("tabMpesaBtn");
+      const voucherBtn = document.getElementById("tabVoucherBtn");
+      const mpesaPanel = document.getElementById("mpesaPanel");
+      const voucherPanel = document.getElementById("voucherPanel");
+
+      if (mode === "voucher") {
+        if (mpesaBtn) mpesaBtn.classList.remove("active");
+        if (voucherBtn) voucherBtn.classList.add("active");
+        if (mpesaPanel) mpesaPanel.style.display = "none";
+        if (voucherPanel) {
+          voucherPanel.style.display = "flex";
+          const vInput = document.getElementById("voucherCodeInput");
+          if (vInput) vInput.focus();
+        }
+      } else {
+        if (voucherBtn) voucherBtn.classList.remove("active");
+        if (mpesaBtn) mpesaBtn.classList.add("active");
+        if (voucherPanel) voucherPanel.style.display = "none";
+        if (mpesaPanel) mpesaPanel.style.display = "block";
+      }
+    }
+
+    // Voucher handling
+    const voucherInput = document.getElementById("voucherCodeInput");
+    const redeemBtn = document.getElementById("redeemVoucherBtn");
+    const voucherErrorAlert = document.getElementById("voucherErrorAlert");
+
+    if (voucherInput) {
+      voucherInput.addEventListener("input", (e) => {
+        let val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+        if (val.startsWith("LUMO") && val.length > 4 && val[4] !== "-") {
+          val = "LUMO-" + val.substring(4);
+        }
+        e.target.value = val;
+        if (voucherErrorAlert) voucherErrorAlert.style.display = "none";
+      });
+      voucherInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && redeemBtn) redeemBtn.click();
+      });
+    }
+
+    if (redeemBtn) {
+      redeemBtn.addEventListener("click", async () => {
+        const code = voucherInput ? voucherInput.value.trim().toUpperCase() : "";
+        if (!code) {
+          showVoucherError("Please enter a voucher code.");
+          if (voucherInput) voucherInput.focus();
+          return;
+        }
+
+        redeemBtn.disabled = true;
+        document.getElementById("voucherBtnText").innerText = "Validating Voucher...";
+        if (voucherErrorAlert) voucherErrorAlert.style.display = "none";
+
+        try {
+          const res = await fetch(FLASK_API_BASE + "/api/redeem-voucher", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: code, gateway_url: "http://192.168.5.1/" })
+          });
+          const data = await res.json();
+          if (res.ok && data.success && data.access_granted) {
+            document.getElementById("voucherBtnText").innerText = "Connected!";
+            document.getElementById("paymentModal").classList.remove("hidden");
+            showSuccess(data);
+          } else {
+            showVoucherError(data.error || "Could not validate voucher.");
+            redeemBtn.disabled = false;
+            document.getElementById("voucherBtnText").innerText = "Connect with Voucher";
+          }
+        } catch (err) {
+          console.error("Voucher error:", err);
+          showVoucherError("Could not connect to payment backend. Make sure hotspot is running.");
+          redeemBtn.disabled = false;
+          document.getElementById("voucherBtnText").innerText = "Connect with Voucher";
+        }
+      });
+    }
+
+    function showVoucherError(msg) {
+      if (voucherErrorAlert) {
+        voucherErrorAlert.innerText = msg;
+        voucherErrorAlert.style.display = "block";
+      } else {
+        alert(msg);
+      }
     }
   </script>
 </body>

@@ -688,3 +688,93 @@ body {
   to { opacity: 1; }
 }
 
+/* Checkout Mode Switcher Tabs */
+.checkout-tabs {
+  display: flex;
+  background-color: #0f172a;
+  border-radius: var(--radius-md);
+  padding: 4px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+  gap: 4px;
+}
+
+.checkout-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkout-tab:hover {
+  color: #ffffff;
+}
+
+.checkout-tab.active {
+  background-color: #1e293b;
+  color: #34d399;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.voucher-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.voucher-instruction p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.voucher-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.voucher-input-wrapper input {
+  width: 100%;
+  padding: 14px 16px;
+  background-color: #0f172a;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: #34d399;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.voucher-input-wrapper input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.voucher-error-alert {
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-top: 8px;
+  text-align: center;
+  animation: fadeIn 0.2s ease;
+}
+

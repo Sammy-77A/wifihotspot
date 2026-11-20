@@ -294,5 +294,107 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTime();
     setInterval(renderTime, 1000);
   }
+
+  // 7. Tab Switching (M-Pesa vs Voucher)
+  window.switchCheckoutTab = function(mode) {
+    const mpesaBtn = document.getElementById("tabMpesaBtn");
+    const voucherBtn = document.getElementById("tabVoucherBtn");
+    const mpesaPanel = document.getElementById("mpesaPanel");
+    const voucherPanel = document.getElementById("voucherPanel");
+
+    if (mode === "voucher") {
+      if (mpesaBtn) mpesaBtn.classList.remove("active");
+      if (voucherBtn) voucherBtn.classList.add("active");
+      if (mpesaPanel) mpesaPanel.style.display = "none";
+      if (voucherPanel) {
+        voucherPanel.style.display = "flex";
+        const vInput = document.getElementById("voucherCodeInput");
+        if (vInput) vInput.focus();
+      }
+    } else {
+      if (voucherBtn) voucherBtn.classList.remove("active");
+      if (mpesaBtn) mpesaBtn.classList.add("active");
+      if (voucherPanel) voucherPanel.style.display = "none";
+      if (mpesaPanel) mpesaPanel.style.display = "block";
+    }
+  };
+
+  // 8. Voucher Code Input & Redemption
+  const voucherInput = document.getElementById("voucherCodeInput");
+  const redeemBtn = document.getElementById("redeemVoucherBtn");
+  const voucherErrorAlert = document.getElementById("voucherErrorAlert");
+
+  if (voucherInput) {
+    voucherInput.addEventListener("input", (e) => {
+      let val = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+      if (val.startsWith("LUMO") && val.length > 4 && val[4] !== "-") {
+        val = "LUMO-" + val.substring(4);
+      }
+      e.target.value = val;
+      if (voucherErrorAlert) {
+        voucherErrorAlert.style.display = "none";
+      }
+    });
+
+    voucherInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        if (redeemBtn) redeemBtn.click();
+      }
+    });
+  }
+
+  if (redeemBtn) {
+    redeemBtn.addEventListener("click", async () => {
+      const code = voucherInput ? voucherInput.value.trim().toUpperCase() : "";
+      if (!code) {
+        showVoucherError("Please enter a voucher code.");
+        if (voucherInput) voucherInput.focus();
+        return;
+      }
+
+      redeemBtn.disabled = true;
+      const btnText = redeemBtn.querySelector(".btn-text");
+      if (btnText) btnText.innerText = "Validating Voucher...";
+      if (voucherErrorAlert) voucherErrorAlert.style.display = "none";
+
+      try {
+        const response = await fetch("/api/redeem-voucher", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: code,
+            mac: deviceMac,
+            ip: deviceIp,
+            gateway_url: gatewayUrl,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success && data.access_granted) {
+          if (btnText) btnText.innerText = "Connected!";
+          showSuccessState(data);
+        } else {
+          showVoucherError(data.error || "Could not validate voucher.");
+          redeemBtn.disabled = false;
+          if (btnText) btnText.innerText = "Connect with Voucher";
+        }
+      } catch (err) {
+        console.error("Voucher redemption error:", err);
+        showVoucherError("Network error. Please make sure you are connected to the WiFi.");
+        redeemBtn.disabled = false;
+        if (btnText) btnText.innerText = "Connect with Voucher";
+      }
+    });
+  }
+
+  function showVoucherError(msg) {
+    if (voucherErrorAlert) {
+      voucherErrorAlert.innerText = msg;
+      voucherErrorAlert.style.display = "block";
+    } else {
+      alert(msg);
+    }
+  }
 });
 

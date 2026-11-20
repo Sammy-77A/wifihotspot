@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — {{ brand_name }}</title>
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-hover: #047857;
+      --bg-page: #0b1120;
+      --bg-card: #1e293b;
+      --bg-card-hover: #24344d;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --border-light: #475569;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+    .admin-navbar {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+    }
+    .brand-icon svg { width: 20px; height: 20px; stroke: #fff; }
+    .brand-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .brand-badge {
+      font-size: 11px;
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .portal-link {
+      color: var(--text-muted);
+      font-size: 13px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s;
+    }
+    .portal-link:hover { color: #fff; }
+    .btn-logout {
+      background-color: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover {
+      background-color: var(--danger);
+      color: #fff;
+    }
+    .main-container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      flex: 1;
+    }
+    .flash-banner {
+      background-color: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #a7f3d0;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+    }
+    .stat-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .stat-subtext {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .tabs-nav {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover {
+      color: #fff;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .card-panel {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .panel-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .gen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .input-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-ctrl {
+      width: 100%;
+      padding: 10px 12px;
+      background-color: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    .form-ctrl:focus {
+      border-color: var(--primary);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.95; }
+    .btn-secondary {
+      background-color: #334155;
+      border: 1px solid var(--border-light);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.15s;
+    }
+    .btn-secondary:hover { background-color: #475569; }
+    .btn-danger {
+      background-color: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-danger:hover {
+      background-color: var(--danger);
+      color: #fff;
+    }
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      background-color: #0f172a;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background-color: rgba(255, 255, 255, 0.02); }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .badge-unused { background-color: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-redeemed { background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-expired { background-color: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+    .badge-active { background-color: rgba(16, 185, 129, 0.2); color: #10b981; font-weight: 700; border: 1px solid var(--primary); }
+    .code-display {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #34d399;
+      background-color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .empty-state {
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .code-box-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .code-box-modal.active { display: flex; }
+    .modal-box {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 520px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .modal-textarea {
+      width: 100%;
+      height: 160px;
+      background-color: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: #34d399;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 12px;
+      margin: 14px 0;
+      outline: none;
+      resize: vertical;
+    }
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .plan-card {
+      background-color: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+    .plan-name { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .plan-price { font-size: 20px; font-weight: 700; color: var(--primary); margin: 6px 0; }
+    .plan-meta { font-size: 12px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="admin-navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+          <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+      </div>
+      <div>
+        <span class="brand-title">{{ brand_name }}</span>
+        <span class="brand-badge">Admin</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <a href="/portal" target="_blank" class="portal-link">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+        Open Customer Portal
+      </a>
+      <a href="/admin/logout" class="btn-logout">Logout</a>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- Flash message -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash-banner">
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.remove()" style="background:none; border:none; color:inherit; cursor:pointer; font-size:16px;">&times;</button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Metrics Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Active Hotspot Sessions</div>
+        <div class="stat-value" style="color: #34d399;">
+          {{ active_sessions|length }}
+        </div>
+        <div class="stat-subtext">Currently connected & browsing</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Available Vouchers</div>
+        <div class="stat-value">
+          {{ voucher_stats.unused }}
+        </div>
+        <div class="stat-subtext">Ready for distribution (Unused)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Redeemed Vouchers</div>
+        <div class="stat-value" style="color: #60a5fa;">
+          {{ voucher_stats.redeemed }}
+        </div>
+        <div class="stat-subtext">Claimed by customers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Vouchers</div>
+        <div class="stat-value">
+          {{ voucher_stats.total }}
+        </div>
+        <div class="stat-subtext">Generated all-time</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('tab-vouchers', this)">🎟️ Voucher Generator</button>
+      <button class="tab-btn" onclick="switchTab('tab-active-sessions', this)">⚡ Active Sessions ({{ active_sessions|length }})</button>
+      <button class="tab-btn" onclick="switchTab('tab-history', this)">📜 Session History</button>
+      <button class="tab-btn" onclick="switchTab('tab-audit', this)">🔍 Audit Log</button>
+      <button class="tab-btn" onclick="switchTab('tab-plans', this)">📦 Plans Overview</button>
+    </div>
+
+    <!-- TAB 1: Vouchers Generator & List -->
+    <div id="tab-vouchers" class="tab-content active">
+      <div class="card-panel">
+        <div class="panel-title">
+          <span>Generate New Vouchers</span>
+        </div>
+        <form id="voucherGenForm" method="POST" action="/admin/vouchers/generate">
+          <div class="gen-grid">
+            <div>
+              <label class="input-label" for="plan_id">Select Plan *</label>
+              <select class="form-ctrl" id="plan_id" name="plan_id" required>
+                {% for plan in plans %}
+                <option value="{{ plan.id }}">{{ plan.name }} — KES {{ plan.price_kes }} ({{ plan.duration_label }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="input-label" for="quantity">Quantity (1 to 500) *</label>
+              <input class="form-ctrl" type="number" id="quantity" name="quantity" min="1" max="500" value="10" required>
+            </div>
+            <div>
+              <label class="input-label" for="expiry_days">Valid For (Days, Optional)</label>
+              <input class="form-ctrl" type="number" id="expiry_days" name="expiry_days" min="1" placeholder="Leave empty for No Expiry">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Generate Vouchers
+          </button>
+        </form>
+      </div>
+
+      <div class="card-panel">
+        <div class="panel-title">
+          <span>Voucher Inventory</span>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-secondary" onclick="copyAllVouchers()">📋 Copy Codes</button>
+            <a href="/admin/vouchers/export.csv" class="btn-secondary">📥 Export CSV</a>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Voucher Code</th>
+                <th>Plan Name</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Expires At</th>
+                <th>Redeemed By</th>
+                <th>Redeemed Date</th>
+              </tr>
+            </thead>
+            <tbody id="vouchersTableBody">
+              {% for v in vouchers %}
+              <tr>
+                <td><span class="code-display">{{ v.code }}</span></td>
+                <td>{{ v.plan_name }}</td>
+                <td>KES {{ v.amount_kes }}</td>
+                <td>
+                  <span class="badge badge-{{ v.status }}">{{ v.status }}</span>
+                </td>
+                <td>{{ v.expires_at[:10] if v.expires_at else 'Never' }}</td>
+                <td>{{ v.redeemed_by_mac or '—' }}</td>
+                <td>{{ v.redeemed_at[:19].replace('T', ' ') if v.redeemed_at else '—' }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" class="empty-state">No vouchers generated yet. Use the form above to generate your first batch!</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Active Sessions -->
+    <div id="tab-active-sessions" class="tab-content">
+      <div class="card-panel">
+        <div class="panel-title">
+          <span>Live Connected Devices ({{ active_sessions|length }})</span>
+          <button class="btn-secondary" onclick="location.reload()">🔄 Refresh</button>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>MAC Address</th>
+                <th>IP Address</th>
+                <th>Plan</th>
+                <th>Payment / Voucher</th>
+                <th>Time Remaining</th>
+                <th>Expires At</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in active_sessions %}
+              <tr>
+                <td><strong style="color: #fff;">{{ s.client_mac }}</strong></td>
+                <td>{{ s.client_ip }}</td>
+                <td>{{ s.plan_name }}</td>
+                <td>{{ s.phone_number }}</td>
+                <td>
+                  <span class="badge badge-active">
+                    {% if s.remaining_minutes >= 60 %}
+                      {{ (s.remaining_minutes // 60) }}h {{ (s.remaining_minutes % 60) }}m left
+                    {% else %}
+                      {{ s.remaining_minutes }} min left
+                    {% endif %}
+                  </span>
+                </td>
+                <td>{{ s.expires_at[:19].replace('T', ' ') if s.expires_at else '—' }}</td>
+                <td>
+                  <form method="POST" action="/admin/sessions/revoke/{{ s.session_id }}" onsubmit="return confirm('Revoke internet access for {{ s.client_mac }} immediately?');">
+                    <button type="submit" class="btn-danger">Revoke</button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" class="empty-state">No active sessions at the moment. Connected clients who purchase access or enter a voucher will appear here.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Session History -->
+    <div id="tab-history" class="tab-content">
+      <div class="card-panel">
+        <div class="panel-title">
+          <span>Session History (Past & Present)</span>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Session ID</th>
+                <th>MAC Address</th>
+                <th>IP</th>
+                <th>Plan</th>
+                <th>Amount</th>
+                <th>Identifier</th>
+                <th>Status</th>
+                <th>Created At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in history %}
+              <tr>
+                <td><code>{{ s.session_id }}</code></td>
+                <td>{{ s.client_mac }}</td>
+                <td>{{ s.client_ip }}</td>
+                <td>{{ s.plan_name }}</td>
+                <td>KES {{ s.amount_kes }}</td>
+                <td>{{ s.phone_number }}</td>
+                <td>
+                  {% if s.status == 'active' %}
+                  <span class="badge badge-active">Active</span>
+                  {% elif s.status == 'expired' %}
+                  <span class="badge badge-expired">Expired</span>
+                  {% elif s.status == 'pending' %}
+                  <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">Pending</span>
+                  {% else %}
+                  <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;">{{ s.status }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ s.created_at[:19].replace('T', ' ') if s.created_at else '—' }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="8" class="empty-state">No session history recorded yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Audit Logs -->
+    <div id="tab-audit" class="tab-content">
+      <div class="card-panel">
+        <div class="panel-title">
+          <span>Security & Event Audit Trail</span>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Event</th>
+                <th>MAC Address</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in audit_logs %}
+              <tr>
+                <td style="color: var(--text-muted); font-size: 12px;">{{ log.created_at[:19].replace('T', ' ') }}</td>
+                <td><strong style="color: #38bdf8;">{{ log.event_type }}</strong></td>
+                <td>{{ log.client_mac or '—' }}</td>
+                <td>{{ log.details }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="empty-state">No audit events recorded yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Plans Overview -->
+    <div id="tab-plans" class="tab-content">
+      <div class="card-panel">
+        <div class="panel-title">
+          <span>Configured WiFi Plans (from config.json)</span>
+        </div>
+        <div class="plans-grid">
+          {% for p in plans %}
+          <div class="plan-card">
+            <div class="plan-name">{{ p.name }}</div>
+            <div class="plan-price">KES {{ p.price_kes }}</div>
+            <div class="plan-meta"><strong>Duration:</strong> {{ p.duration_label }} ({{ p.duration_seconds // 60 }} min)</div>
+            <div class="plan-meta"><strong>ID:</strong> <code>{{ p.id }}</code></div>
+            {% if p.badge %}
+            <div style="margin-top: 8px;">
+              <span class="badge badge-unused">{{ p.badge }}</span>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal for Copying Codes -->
+  <div id="copyModal" class="code-box-modal">
+    <div class="modal-box">
+      <h3 style="color:#fff; font-size:18px;">📋 Vouchers Ready to Copy</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">Copy these codes for WhatsApp, SMS, or distribution:</p>
+      <textarea id="modalTextarea" class="modal-textarea" readonly></textarea>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn-secondary" onclick="closeCopyModal()">Close</button>
+        <button class="btn-primary" onclick="copyModalContent()">Copy to Clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      el.classList.add('active');
+      const target = document.getElementById(tabId);
+      if (target) {
+        target.classList.add('active');
+      }
+      history.replaceState(null, null, '#' + tabId.replace('tab-', ''));
+    }
+
+    // Restore tab from URL hash
+    window.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        const btn = document.querySelector(`[onclick*="tab-${hash}"]`);
+        if (btn) {
+          btn.click();
+        }
+      }
+    });
+
+    // Copy Vouchers functionality
+    function copyAllVouchers() {
+      const rows = document.querySelectorAll('#vouchersTableBody tr');
+      const list = [];
+      rows.forEach(r => {
+        const codeEl = r.querySelector('.code-display');
+        const planEl = r.querySelectorAll('td')[1];
+        const statusEl = r.querySelector('.badge');
+        if (codeEl && planEl && statusEl && statusEl.textContent.trim() === 'unused') {
+          list.push(`${codeEl.textContent.trim()} — ${planEl.textContent.trim()}`);
+        }
+      });
+
+      if (list.length === 0) {
+        alert('No unused vouchers found to copy.');
+        return;
+      }
+
+      const text = list.join('\n');
+      document.getElementById('modalTextarea').value = text;
+      document.getElementById('copyModal').classList.add('active');
+    }
+
+    function closeCopyModal() {
+      document.getElementById('copyModal').classList.remove('active');
+    }
+
+    function copyModalContent() {
+      const textarea = document.getElementById('modalTextarea');
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        alert('Copied ' + textarea.value.split('\n').length + ' voucher codes to clipboard!');
+        closeCopyModal();
+      }).catch(() => {
+        document.execCommand('copy');
+        alert('Copied to clipboard!');
+        closeCopyModal();
+      });
+    }
+
+    // Ajax handling for voucher generation to immediately show copy box
+    document.getElementById('voucherGenForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const planId = document.getElementById('plan_id').value;
+      const quantity = document.getElementById('quantity').value;
+      const expiryDays = document.getElementById('expiry_days').value;
+
+      try {
+        const res = await fetch('/admin/vouchers/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            plan_id: planId,
+            quantity: quantity,
+            expiry_days: expiryDays || null
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.vouchers) {
+          const lines = data.vouchers.map(v => `${v.code} (${v.plan_name} - KES ${v.amount_kes})`);
+          document.getElementById('modalTextarea').value = lines.join('\n');
+          document.getElementById('copyModal').classList.add('active');
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          alert('Error: ' + (data.error || 'Failed to generate vouchers'));
+        }
+      } catch (err) {
+        this.submit(); // fallback to normal form submit
+      }
+    });
+  </script>
+</body>
+</html>
