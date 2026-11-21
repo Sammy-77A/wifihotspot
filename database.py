@@ -445,14 +445,38 @@ def create_vouchers(
 
 
 def get_voucher(code: str) -> Optional[Dict[str, Any]]:
-    """Fetches a voucher by its code (case-insensitive)."""
+    """
+    Fetches a voucher by its code (case-insensitive and prefix-optional).
+    Supports:
+      - Exact match: "LUMO-78X2KP" or "78X2KP"
+      - Prepending brand prefix: "78X2KP" -> "LUMO-78X2KP"
+      - Inserting dash: "LUMO78X2KP" -> "LUMO-78X2KP"
+      - Matching suffix after dash: "%-78X2KP"
+    """
     if not code:
         return None
-    normalized = code.strip().upper()
+    normalized = code.strip().upper().replace(" ", "")
     conn = get_db_connection()
     cursor = conn.cursor()
+
+    # 1. Exact match (e.g. LUMO-78X2KP or custom code)
     cursor.execute("SELECT * FROM vouchers WHERE UPPER(code) = ?", (normalized,))
     row = cursor.fetchone()
+
+    # 2. Try LUMO- prefix variations
+    if not row and not normalized.startswith("LUMO-"):
+        if normalized.startswith("LUMO") and len(normalized) > 4:
+            alt_code = "LUMO-" + normalized[4:]
+        else:
+            alt_code = f"LUMO-{normalized}"
+        cursor.execute("SELECT * FROM vouchers WHERE UPPER(code) = ?", (alt_code,))
+        row = cursor.fetchone()
+
+    # 3. Match suffix after hyphen (e.g. any prefix: PREFIX-78X2KP)
+    if not row and "-" not in normalized:
+        cursor.execute("SELECT * FROM vouchers WHERE UPPER(code) LIKE ?", (f"%-{normalized}",))
+        row = cursor.fetchone()
+
     conn.close()
     return dict(row) if row else None
 

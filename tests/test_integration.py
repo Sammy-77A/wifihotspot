@@ -460,6 +460,60 @@ class TestCaptivePortal(unittest.TestCase):
         sess_after = database.get_session_by_id(sess_id)
         self.assertEqual(sess_after["status"], "expired")
 
+    def test_20_voucher_prefix_optional(self):
+        # Create vouchers to test prefix-optional redemption
+        batch = database.create_vouchers(
+            plan_id="1hr",
+            plan_name="1 Hour Pass",
+            duration_seconds=3600,
+            amount_kes=10,
+            quantity=2,
+        )
+        full_code_1 = batch[0]["code"]
+        suffix_1 = full_code_1.split("-")[1]
+
+        full_code_2 = batch[1]["code"]
+        suffix_2 = full_code_2.split("-")[1]
+
+        # 1. database.get_voucher matches suffix only
+        v1 = database.get_voucher(suffix_1)
+        self.assertIsNotNone(v1)
+        self.assertEqual(v1["code"], full_code_1)
+
+        # 2. database.get_voucher matches lowercase suffix
+        v1_lower = database.get_voucher(suffix_1.lower())
+        self.assertIsNotNone(v1_lower)
+        self.assertEqual(v1_lower["code"], full_code_1)
+
+        # 3. database.get_voucher matches unhyphenated "LUMO" + suffix
+        v1_unhyphenated = database.get_voucher(f"lumo{suffix_1.lower()}")
+        self.assertIsNotNone(v1_unhyphenated)
+        self.assertEqual(v1_unhyphenated["code"], full_code_1)
+
+        # 4. API redeem voucher using suffix only (e.g. 78X2KP)
+        resp1 = self.client.post("/api/redeem-voucher", json={
+            "code": suffix_1,
+            "mac": "AA:BB:CC:DD:EE:77",
+            "ip": "192.168.5.177",
+        })
+        self.assertEqual(resp1.status_code, 200)
+        data1 = json.loads(resp1.data)
+        self.assertTrue(data1["success"])
+        self.assertTrue(data1["access_granted"])
+        self.assertEqual(data1["customer_voucher"], full_code_1)
+
+        # 5. API redeem voucher using unhyphenated lowercase (e.g. lumo78x2kp)
+        resp2 = self.client.post("/api/redeem-voucher", json={
+            "code": f"lumo{suffix_2.lower()}",
+            "mac": "AA:BB:CC:DD:EE:88",
+            "ip": "192.168.5.188",
+        })
+        self.assertEqual(resp2.status_code, 200)
+        data2 = json.loads(resp2.data)
+        self.assertTrue(data2["success"])
+        self.assertTrue(data2["access_granted"])
+        self.assertEqual(data2["customer_voucher"], full_code_2)
+
 
 if __name__ == "__main__":
     unittest.main()
