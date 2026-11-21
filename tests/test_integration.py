@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import database
 import device_manager
 from hotspot_manager import HotspotManager
-from app import app, CONFIG, cyzora_client
+from app import app, CONFIG, cyzora_client, ADMIN_USERNAME, ADMIN_PASSWORD
 
 
 class TestCaptivePortal(unittest.TestCase):
@@ -300,6 +300,27 @@ class TestCaptivePortal(unittest.TestCase):
         self.assertEqual(stored["status"], "redeemed")
         self.assertEqual(stored["redeemed_by_mac"], "12:34:56:78:9A:BC")
 
+    def test_13b_api_redeem_voucher_without_explicit_ip_or_mac(self):
+        # Simulates real phone sending only {"code": "...", "gateway_url": "..."}
+        batch = database.create_vouchers(
+            plan_id="1hr",
+            plan_name="1 Hour Pass",
+            duration_seconds=3600,
+            amount_kes=10,
+            quantity=1,
+        )
+        code = batch[0]["code"]
+
+        resp = self.client.post("/api/redeem-voucher", json={
+            "code": code,
+            "gateway_url": "http://192.168.5.1/",
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertTrue(data["success"])
+        self.assertTrue(data["access_granted"])
+        self.assertEqual(data["customer_voucher"], code)
+
     def test_14_api_redeem_voucher_already_used(self):
         batch = database.create_vouchers(
             plan_id="1hr",
@@ -379,12 +400,12 @@ class TestCaptivePortal(unittest.TestCase):
         self.assertIn("/admin/login", resp_unauth.headers.get("Location", ""))
 
         # 2. Invalid credentials fail
-        resp_fail = self.client.post("/admin/login", data={"username": "admin", "password": "wrongpassword"})
+        resp_fail = self.client.post("/admin/login", data={"username": ADMIN_USERNAME, "password": "wrongpassword123"})
         self.assertEqual(resp_fail.status_code, 200)
         self.assertIn(b"Invalid username or password", resp_fail.data)
 
         # 3. Valid credentials succeed
-        resp_login = self.client.post("/admin/login", data={"username": "admin", "password": "admin123"}, follow_redirects=True)
+        resp_login = self.client.post("/admin/login", data={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD}, follow_redirects=True)
         self.assertEqual(resp_login.status_code, 200)
         self.assertIn(b"Voucher Generator", resp_login.data)
 
@@ -395,7 +416,7 @@ class TestCaptivePortal(unittest.TestCase):
 
     def test_18_admin_voucher_generate_and_export(self):
         # Login first
-        self.client.post("/admin/login", data={"username": "admin", "password": "admin123"})
+        self.client.post("/admin/login", data={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD})
 
         # Generate batch of 3 vouchers via JSON
         resp_gen = self.client.post(
@@ -431,7 +452,7 @@ class TestCaptivePortal(unittest.TestCase):
         self.assertEqual(sess["status"], "active")
 
         # Admin revokes session
-        self.client.post("/admin/login", data={"username": "admin", "password": "admin123"})
+        self.client.post("/admin/login", data={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD})
         resp_revoke = self.client.post(f"/admin/sessions/revoke/{sess_id}", headers={"Accept": "application/json"})
         self.assertEqual(resp_revoke.status_code, 200)
 

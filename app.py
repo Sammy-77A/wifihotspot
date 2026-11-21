@@ -240,8 +240,9 @@ def api_redeem_voucher():
     if not raw_code:
         return jsonify({"success": False, "error": "Please enter a voucher code."}), 400
 
-    client_ip = payload.get("ip") or device_manager.get_client_ip(request)
-    client_mac = payload.get("mac") or device_manager.resolve_mac(request, client_ip)
+    device_info = device_manager.get_client_device_info(request)
+    client_ip = payload.get("ip") or device_info.get("ip") or request.remote_addr or "127.0.0.1"
+    client_mac = device_manager.normalize_mac(payload.get("mac")) or device_info.get("mac") or "02:00:00:00:00:01"
     gateway_url = payload.get("gateway_url") or f"http://{hotspot_manager.gateway_ip}/"
 
     # 1. Lookup voucher in database

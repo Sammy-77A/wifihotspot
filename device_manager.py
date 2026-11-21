@@ -156,3 +156,23 @@ def get_client_device_info(request) -> dict:
         "gateway_url": request.args.get("url") or request.args.get("dest") or request.args.get("orig_url")
     }
 
+
+def get_client_ip(request) -> str:
+    """Extracts client IP address from request."""
+    if request.headers.get("X-Forwarded-For"):
+        return request.headers.get("X-Forwarded-For").split(",")[0].strip()
+    return request.remote_addr or "127.0.0.1"
+
+
+def resolve_mac(request, ip_address: Optional[str] = None) -> str:
+    """Extracts or resolves client MAC address from request or ARP cache."""
+    info = get_client_device_info(request)
+    if info.get("mac"):
+        return info["mac"]
+    if ip_address:
+        mac = resolve_mac_from_arp(ip_address)
+        if mac:
+            return mac
+    return "02:00:00:00:00:01"
+
+
