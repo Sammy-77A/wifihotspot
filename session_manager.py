@@ -20,8 +20,12 @@ _stop_event = threading.Event()
 def check_and_revoke_expired_sessions(manager: HotspotManager):
     """
     Finds all active sessions whose expiry time has passed and revokes them.
+    Also expires any unused vouchers whose validity shelf-life has elapsed.
     """
     try:
+        # 0. Expire any unused vouchers whose shelf-life passed
+        database.check_and_expire_unused_vouchers()
+
         expired_sessions = database.get_expired_sessions()
         if expired_sessions:
             logger.info(f"Found {len(expired_sessions)} expired session(s) to revoke.")

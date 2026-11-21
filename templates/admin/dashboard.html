@@ -493,8 +493,9 @@
               <input class="form-ctrl" type="number" id="quantity" name="quantity" min="1" max="500" value="10" required>
             </div>
             <div>
-              <label class="input-label" for="expiry_days">Valid For (Days, Optional)</label>
-              <input class="form-ctrl" type="number" id="expiry_days" name="expiry_days" min="1" placeholder="Leave empty for No Expiry">
+              <label class="input-label" for="expiry_days">Voucher Shelf-Life (Days to Redeem)</label>
+              <input class="form-ctrl" type="number" id="expiry_days" name="expiry_days" min="1" placeholder="e.g. 30 (Leave blank for No Expiry)">
+              <span style="font-size:11px; color:var(--text-muted); display:block; margin-top:4px;">How many days before an unused voucher expires. Once redeemed, the plan duration takes over.</span>
             </div>
           </div>
           <button type="submit" class="btn-primary">
@@ -538,7 +539,17 @@
                 <td>
                   <span class="badge badge-{{ v.status }}">{{ v.status }}</span>
                 </td>
-                <td>{{ v.expires_at[:10] if v.expires_at else 'Never' }}</td>
+                <td>
+                  {% if v.status == 'redeemed' %}
+                    <span style="color: var(--text-muted);">Redeemed</span>
+                  {% elif v.status == 'expired' %}
+                    <span style="color: #f87171;">Expired ({{ v.expires_at[:10] }})</span>
+                  {% elif v.expires_at %}
+                    {{ v.expires_at[:10] }}
+                  {% else %}
+                    <span style="color: var(--text-muted);">No Expiry</span>
+                  {% endif %}
+                </td>
                 <td>{{ v.redeemed_by_mac or '—' }}</td>
                 <td>{{ v.redeemed_at[:19].replace('T', ' ') if v.redeemed_at else '—' }}</td>
               </tr>

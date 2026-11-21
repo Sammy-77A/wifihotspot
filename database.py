@@ -602,6 +602,23 @@ def create_active_voucher_session(
     return get_session_by_id(session_id)
 
 
+def check_and_expire_unused_vouchers():
+    """Marks any unused vouchers whose expires_at timestamp is in the past as expired."""
+    now_iso = get_utc_now_iso()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE vouchers
+        SET status = 'expired'
+        WHERE status = 'unused' AND expires_at IS NOT NULL AND expires_at <= ?
+        """,
+        (now_iso,),
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_all_vouchers(
     status: Optional[str] = None,
     plan_id: Optional[str] = None,
@@ -609,6 +626,7 @@ def get_all_vouchers(
     offset: int = 0,
 ) -> List[Dict[str, Any]]:
     """Fetches vouchers with optional status and plan filters, newest first."""
+    check_and_expire_unused_vouchers()
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -633,6 +651,7 @@ def get_all_vouchers(
 
 def get_voucher_stats() -> Dict[str, int]:
     """Calculates counts for unused, redeemed, expired, and total vouchers."""
+    check_and_expire_unused_vouchers()
     conn = get_db_connection()
     cursor = conn.cursor()
 
